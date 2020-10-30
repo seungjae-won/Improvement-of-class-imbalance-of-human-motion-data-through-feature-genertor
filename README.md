@@ -3,7 +3,7 @@ Using the ACGAN idear feature generator
 
 
 ### Abstract
-
+![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
 
 
 
@@ -13,7 +13,7 @@ Using the ACGAN idear feature generator
 
 
 ### Results
-| Imbalane rate | original lstm | Over-sampling(smoth) | Weight-balancing | Proposed method |
+| Imbalane rate | Original LSTM | Over-sampling(smoth) | Weight-balancing | Proposed method |
 | :-------------: |------------:|---------:|---------:| --:|
 | 2 : 1      | 85.00 % | 41.67 % | 12.50 % | 21.67 % |
 | 3 : 1      | 79.17 % | 35.00 % | 11.67 % | 74.17 % |
