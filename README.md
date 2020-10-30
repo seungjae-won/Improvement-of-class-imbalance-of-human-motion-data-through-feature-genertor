@@ -1,11 +1,13 @@
 ## Improvement of data imbalance problem in human motion recognition
 Using the ACGAN idear feature generator
-<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/model_figure.PNG" width="500" height="300">
+
+
+
 
 ### Abstract
 
 
-
+<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/model_figure.PNG" width="500" height="300">
 ### Dataset
 
 
