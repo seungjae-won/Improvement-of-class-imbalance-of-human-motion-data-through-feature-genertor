@@ -1,3 +1,5 @@
+ -- This is an ongoing project and not the final result. --
+
 ## Improvement of data imbalance problem in human motion recognition
 <br>
 Using the ACGAN idear feature generator
@@ -12,7 +14,12 @@ Class imbalance problem of data degrades classification performance. The same go
 
 
 ### Dataset
-[MSRC-12]: https://www.microsoft.com/en-us/download/details.aspx?id=52283
+Download-dataset : [MSRC-12 - download](https://www.microsoft.com/en-us/download/details.aspx?id=52283) <br>
+Dataset document : [Reference document](https://nanopdf.com/download/this-document-microsoft-research_pdf)
+
+There are a total of 12 classes, approximately 50 sequences for each class were used for training and 10 sequences were used for the test. Data sampling is used to solve the inherent problem of human motion recognition, the difference in sequence length for each motion.
+
+
 
 ### Method
 <img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/proposed_method.PNG" align="left" height="300" width="500" >
@@ -27,7 +34,6 @@ Class imbalance problem of data degrades classification performance. The same go
 | 5 : 1      | 71.67 % | 24.17 % | 10.83 % | 48.33 % |
 | 10 : 1      | 65.00 % | 24.17 % | 15.00 % | 41.67 % |
 
-                                            -- This is an ongoing project and not the final result. --
 
 ### Discussion
 1. Features that have passed LSTM may not be suitable
