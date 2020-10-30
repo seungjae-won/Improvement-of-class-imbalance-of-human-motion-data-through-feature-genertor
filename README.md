@@ -7,7 +7,7 @@ Using the ACGAN idear feature generator
 
 ### Abstract
 
-![title]( {: width="50%" height="50%"})
+
 
 ### Dataset
 
