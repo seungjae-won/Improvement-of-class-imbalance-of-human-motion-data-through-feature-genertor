@@ -6,12 +6,11 @@ Using the ACGAN idear feature generator
 
 ### Abstract
 
+![title](https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/model_figure.PNG){: width="50%" height="50%"}
 
-<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/model_figure.PNG" width="500" height="300">
 ### Dataset
 
-
-<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/proposed_method.PNG" width="500" height="300">
+![title](https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/proposed_method.PNG){: width="50%" height="50%"}
 
 ### Results
 | Imbalane rate | Original LSTM | Over-sampling(smoth) | Weight-balancing | Proposed method |
