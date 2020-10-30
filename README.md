@@ -17,7 +17,7 @@ Class imbalance problem of data degrades classification performance. The same go
 Download-dataset : [MSRC-12 - download](https://www.microsoft.com/en-us/download/details.aspx?id=52283) <br>
 Dataset document : [Reference document](https://nanopdf.com/download/this-document-microsoft-research_pdf)
 
-There are a total of 12 classes, approximately 50 sequences for each class were used for training and 10 sequences were used for the test. Data sampling is used to solve the inherent problem of human motion recognition, the difference in sequence length for each motion.
+There are a total of 12 classes, approximately 50 sequences for each class were used for training and 10 sequences were used for the test. Data sampling is used to solve the inherent problem of human motion recognition, the difference in sequence length for each motion. The odd-numbered class(total 6 classes) was trained by creating an artificial imbalance situation according to the experimental ratio to the number of balanced classes. 
 
 
 
