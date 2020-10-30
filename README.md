@@ -1,19 +1,22 @@
 ## Improvement of data imbalance problem in human motion recognition
+<br>
 Using the ACGAN idear feature generator
+<br><br>
+<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/model_figure.PNG" align="left" height="300" width="500" >
 
-<a href="url"><img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/model_figure.PNG" align="left" height="300" width="500" ></a>
+<br><br><br><br><br><br><br><br><br><br><br><br>
 
-
-
-### Abstract
-
+###Abstract
+awekfaweoifjewfjoiawefjoiawefjoiawejfoiwaawefjoawefjoifoijawefaewfafo
 
 
 ### Dataset
-
+awekfaweoifjewfjoiawefjoiawefjoiawejfoiwaawefjoawefjoifoijawefaewfafo
 
 ### Method
-<a href="url"><img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/proposed_method.PNG" align="left" height="300" width="500" ></a>
+<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/proposed_method.PNG" align="left" height="300" width="500" >
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
 
 ### Results
 | Imbalane rate | Original LSTM | Over-sampling(smoth) | Weight-balancing | Proposed method |
