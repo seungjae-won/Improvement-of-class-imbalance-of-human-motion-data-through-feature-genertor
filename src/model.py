@@ -86,3 +86,15 @@ class Feature_Discriminator(nn.Module):
     def forward(self, x):
         return self.discriminator_binary(x), self.discriminator_class(x)
 
+
+class classifier(nn.Module):
+    def __init__(self, feature_size, hidden_size, num_classes):
+        super(classifier, self).__init__()
+        self.classifier = nn.Sequential(
+            nn.Linear(feature_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size,num_classes)
+        )
+    
+    def forward(self, x):
+        return self.classifier(x)

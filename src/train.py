@@ -19,6 +19,8 @@ from util import *
 import argparse
 from torch.autograd import Variable
 from train import *
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import f1_score
 
 class Train:
     
@@ -32,14 +34,18 @@ class Train:
         self.test_data_dir = args.test_data_dir
         self.lstm_ckpt_dir = args.lstm_ckpt_dir
         self.lstm_log_dir = args.lstm_log_dir
+        self.lstm_figure_dir = args.lstm_figure_dir
         self.oversampling_ckpt_dir = args.oversampling_ckpt_dir
         self.oversampling_log_dir = args.oversampling_log_dir
+        self.oversampling_figure_dir = args.oversampling_figure_dir
         self.weight_balancing_ckpt_dir = args.weight_balancing_ckpt_dir
         self.weight_balancing_log_dir = args.weight_balancing_log_dir
+        self.weight_figure_dir = args.weight_balancing_figure_dir
         self.feature_gan_ckpt_dir = args.feature_gan_ckpt_dir
         self.feature_gan_log_dir = args.feature_gan_log_dir
         self.lstm_retrain_ckpt_dir = args.lstm_retrain_ckpt_dir
         self.lstm_retrain_log_dir = args.lstm_retrain_log_dir
+        self.lstm_retrain_figure_dir = args.lstm_retrain_figure_dir
 
         self.sequence_length = args.sequence_length
         self.input_size = args.input_size
@@ -53,9 +59,12 @@ class Train:
         self.mode = args.mode
         self.unbalancing_rate = args.unbalancing_rate
         self.train_continue = args.train_continue
-
+        
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
+        self.msrc_class = ['Start','Crouch','Navigate','Goggles','Wind up','Shoot','Take a bow','Throw','Protest','Change weapon','Move up','Kick']
+        
+        
     def lstm(self):
         
         if self.mode == 'lstm' or self.mode == 'weight_balancing':
@@ -67,7 +76,7 @@ class Train:
                                     batch_size=self.batch_size,
                                     shuffle=True)
             test_loader = DataLoader(dataset=test_dataset,
-                                    batch_size=self.batch_size, 
+                                    batch_size=len(test_dataset), 
                                     shuffle=False)
         
         elif self.mode == 'oversampling':
@@ -79,10 +88,11 @@ class Train:
                                     batch_size=self.batch_size,
                                     shuffle=True)
             test_loader = DataLoader(dataset=test_dataset,
-                                    batch_size=self.batch_size, 
+                                    batch_size=len(test_dataset), 
                                     shuffle=False)
 
         fn_pred = lambda output: torch.softmax(output,dim=1)
+        fn_pred_ = lambda pred: pred.max(dim=1)[1]
         fn_acc = lambda pred, label:((pred.max(dim=1)[1] == label).type(torch.float)).mean()
         
         net = RNN_MODEL(input_size = self.input_size, hidden_size = self.lstm_hidden_size, batch_size = self.batch_size, 
@@ -161,8 +171,19 @@ class Train:
                     test_loss_arr+=[test_loss.item()]
                     test_acc_arr+=[test_acc.item()]
             
-            print(self.mode, ' - Epoch [{}/{}]\ttrain_Loss: {:.4f}, train_Accuracy: {:.4f}\ttest_Loss: {:.4f}, test_Accuracy: {:.4f}' .format(epoch+1, self.num_epoch, np.mean(train_loss_arr) , np.mean(train_acc_arr), 
-                                                                                                                                np.mean(test_loss_arr) , np.mean(test_acc_arr)))
+                    pred = fn_pred_(pred)
+                    pred = pred.to('cpu').numpy()
+                    labels = labels.to('cpu').numpy()
+                    pred = pred.reshape(-1)
+                    labels = labels.reshape(-1)
+
+                    f1_result = f1_score(y_pred = pred, y_true = labels, average='micro')         
+                    cm = confusion_matrix(pred, labels)
+                    plot_confusion_matrix(cm = cm, classes = self.msrc_class, title=self.mode+'_confusion_matrix', save_dir = self.lstm_figure_dir)
+                    
+                  
+            print('Epoch [{}/{}]\ttrain_Loss: {:.4f}, train_Accuracy: {:.4f}\ttest_Loss: {:.4f}, test_Accuracy: {:.4f}, f1_score: {:.4f}' .format(epoch+1, self.num_epoch, np.mean(train_loss_arr) , np.mean(train_acc_arr), 
+                                                                                                                                np.mean(test_loss_arr) , np.mean(test_acc_arr), f1_result))
             if min_train_loss > np.mean(train_loss_arr) and epoch >= 30:
                 min_train_loss = np.mean(train_loss_arr)
                 
@@ -185,20 +206,16 @@ class Train:
         
         train_dataset = data_load(data_dir = self.train_data_dir,
                             unbalancing_rate = self.unbalancing_rate, mode=self.mode, sequence_length=self.sequence_length)
-        test_dataset = data_load(data_dir = self.test_data_dir, 
-                                unbalancing_rate = 1.0, mode='lstm', sequence_length=self.sequence_length)
         train_loader = DataLoader(dataset=train_dataset,
                                 batch_size=self.batch_size,
                                 shuffle=True)
-        test_loader = DataLoader(dataset=test_dataset,
-                                batch_size=self.batch_size, 
-                                shuffle=False)
             
         gen_writer = SummaryWriter(log_dir=os.path.join(self.feature_gan_log_dir, 'generator'))
         dis_writer = SummaryWriter(log_dir=os.path.join(self.feature_gan_log_dir, 'discriminator'))
         
         
         fn_pred = lambda output: torch.softmax(output,dim=1)
+        fn_pred_ = lambda pred: pred.max(dim=1)[1]
         fn_acc = lambda pred, label:((pred.max(dim=1)[1] == label).type(torch.float)).mean()
         
         net_lstm = RNN_MODEL(input_size = self.input_size, hidden_size = self.lstm_hidden_size, batch_size = self.batch_size, 
@@ -230,7 +247,8 @@ class Train:
             
             D_loss = []
             G_loss = []
-            accuracy = []
+            real_accuracy = []
+            fake_accuracy = []
             
             for i, (input_value, labels) in enumerate(train_loader):
                 
@@ -246,16 +264,16 @@ class Train:
                 
                 real_bce_outputs, real_ce_outputs = D(lstm_feature)
                 
-                d_real_loss = BCE_criterion(real_bce_outputs, real_bce_labels) + CE_criterion(real_ce_outputs, labels)/2
+                d_real_loss = BCE_criterion(real_bce_outputs, real_bce_labels) + CE_criterion(real_ce_outputs, labels)
                 
                 z = Variable(torch.randn(batch_size, self.latent_size).to(self.device))
-                gen_labels = Variable(torch.LongTensor(np.random.randint(0, self.num_classes, batch_size)).to(self.device))
+                # gen_labels = Variable(torch.LongTensor(np.random.randint(0, self.num_classes, batch_size)).to(self.device))
                 
-                fake_feature = G(z, gen_labels)
+                fake_feature = G(z, labels)
             
                 fake_bce_outputs, fake_ce_outputs = D(fake_feature.detach())
                 
-                d_fake_loss = BCE_criterion(fake_bce_outputs, fake_bce_labels) + CE_criterion(fake_ce_outputs, labels)/2
+                d_fake_loss = BCE_criterion(fake_bce_outputs, fake_bce_labels) + CE_criterion(fake_ce_outputs, labels)
                 
                 d_loss = (d_real_loss + d_fake_loss)/2
                 
@@ -272,12 +290,12 @@ class Train:
                 real_pred = fn_pred(real_ce_outputs)   
                 real_acc = fn_acc(real_pred,labels)
                 fake_pred = fn_pred(fake_ce_outputs)   
-                fake_acc = fn_acc(fake_pred,gen_labels)
+                fake_acc = fn_acc(fake_pred,labels)
                 
-                acc = (real_acc+fake_acc)/2
-                accuracy+=[acc.item()]
+                real_accuracy+=[real_acc.item()]
+                fake_accuracy+=[fake_acc.item()]
                 
-                g_loss = 0.5*(BCE_criterion(bce_outputs, real_bce_labels))+CE_criterion(ce_outputs, gen_labels)
+                g_loss = BCE_criterion(bce_outputs, real_bce_labels)+CE_criterion(ce_outputs, labels)
                 
                 G_loss+=[g_loss.item()]
                 
@@ -286,12 +304,12 @@ class Train:
                 g_optimizer.step()
                 
             
-            print('Epoch [{}/{}]\tG_loss : {:.4f}\tD_loss : {:.4f}\tAccuracy: {:.4f}' .format(epoch+1, self.num_epoch, np.mean(G_loss) , np.mean(D_loss), np.mean(accuracy)))       
+            print('Epoch [{}/{}]\tG_loss : {:.4f}\tD_loss : {:.4f}\treal_Accuracy: {:.4f}\tfake_Accuracy: {:.4f}' .format(epoch+1, self.num_epoch, np.mean(G_loss) , np.mean(D_loss), np.mean(real_accuracy), np.mean(fake_accuracy)))       
                 
             gen_writer.add_scalar('Generator_Loss', np.mean(G_loss), epoch)
             dis_writer.add_scalar('Discriminator_Loss', np.mean(D_loss), epoch)
-            dis_writer.add_scalar('Accuracy', np.mean(accuracy), epoch)
-            
+            dis_writer.add_scalar('real_Accuracy', np.mean(real_accuracy), epoch)
+            dis_writer.add_scalar('fake_Accuracy', np.mean(fake_accuracy), epoch)
             
             save_model(ckpt_dir=os.path.join(self.feature_gan_ckpt_dir, 'generator'), net=G, optim=g_optimizer, epoch=0)
             save_model(ckpt_dir=os.path.join(self.feature_gan_ckpt_dir, 'discriminator'), net=D, optim=d_optimizer, epoch=0)
@@ -301,30 +319,16 @@ class Train:
              
     def lstm_retrain(self):
         
-        train_dataset = data_load(data_dir = self.train_data_dir,
-                            unbalancing_rate = self.unbalancing_rate, mode=self.mode, sequence_length=self.sequence_length)
-        test_dataset = data_load(data_dir = self.test_data_dir, 
-                                unbalancing_rate = 1.0, mode='lstm', sequence_length=self.sequence_length)
-        train_loader = DataLoader(dataset=train_dataset,
-                                batch_size=self.batch_size,
-                                shuffle=True)
-        test_loader = DataLoader(dataset=test_dataset,
-                                batch_size=self.batch_size, 
-                                shuffle=False)
-            
-        
         net = RNN_MODEL(input_size = self.input_size, hidden_size = self.lstm_hidden_size, batch_size = self.batch_size, 
-                    sequence_length = self.sequence_length, num_lstm = self.num_lstm, num_classes = self.num_classes, 
-                    dropout = self.dropout, device = self.device).to(self.device)
-
+                            sequence_length = self.sequence_length, num_lstm = self.num_lstm, num_classes = self.num_classes, 
+                            dropout = self.dropout, device = self.device).to(self.device,dtype=torch.float32)
         criterion = nn.CrossEntropyLoss().to(self.device)
 
         optimizer = optim.Adam(net.parameters(), lr=self.lr)
 
-        num_train_data = len(train_loader.dataset)
-        num_train_batch = np.ceil(num_train_data/self.batch_size)
-        
-        min_train_loss = 2
+        fn_pred = lambda output: torch.softmax(output,dim=1)
+        fn_pred_ = lambda pred: pred.max(dim=1)[1]
+        fn_acc = lambda pred, label:((pred.max(dim=1)[1] == label).type(torch.float)).mean()
         
         writer = SummaryWriter(log_dir=os.path.join(self.lstm_retrain_log_dir))
         
@@ -332,26 +336,58 @@ class Train:
         
         layer_freeze(net.lstm)
         
-        G = Feautre_Generator(latent_size=self.latent_size, hidden_size=self.fg_hidden_size, output_size=self.lstm_hidden_size, num_classes=self.num_classes//2).to(self.device)
-        g_ = optim.Adam(G.parameters(), lr=lr)
+        G = Feautre_Generator(latent_size=self.latent_size, hidden_size=self.fg_hidden_size, output_size=self.lstm_hidden_size, num_classes=self.num_classes).to(self.device)
+        g_ = optim.Adam(G.parameters(), lr=self.lr)
         G, _ = load_model(ckpt_dir=os.path.join(self.feature_gan_ckpt_dir,'generator'), net=G, optim=g_)
-
+        
+        
+        
+        
+        train_dataset = lstm_retrain_dataload(data_dir = self.train_data_dir,
+                                            unbalancing_rate = self.unbalancing_rate, 
+                                            mode=self.mode, 
+                                            sequence_length=self.sequence_length, 
+                                            net=net,
+                                            generator=G,
+                                            device=self.device,
+                                            if_test=False)
+        
+        test_dataset = lstm_retrain_dataload(data_dir = self.test_data_dir, 
+                                            unbalancing_rate = 1.0, 
+                                            mode='lstm', 
+                                            sequence_length=self.sequence_length, 
+                                            net=net,
+                                            generator=G,
+                                            device=self.device,
+                                            if_test=True)
+        
+        train_loader = DataLoader(dataset=train_dataset,
+                                batch_size=self.batch_size,
+                                shuffle=True)
+        test_loader = DataLoader(dataset=test_dataset,
+                                batch_size=len(test_dataset), 
+                                shuffle=False)
+            
+        num_train_data = len(train_loader.dataset)
+        num_train_batch = np.ceil(num_train_data/self.batch_size)
+        
+        feature_classifier = classifier(feature_size = self.sequence_length, hidden_size = self.lstm_hidden_size, num_classes=self.num_classes).to(device=self.device, dtype=torch.float32)
+        
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(feature_classifier.parameters(), lr=self.lr)
         
         for epoch in range(self.num_epoch):
             
-            net.train()
+            feature_classifier.train()
             train_loss_arr = []
             train_acc_arr = []
             
-            for i, (_, labels) in enumerate(train_loader):
-                
-                batch_size = len(labels)
-                z = Variable(torch.randn(batch_size, self.latent_size).to(self.device))
-                labels = labels.to(self.device)
+            for i, (feature, labels) in enumerate(train_loader):
+                feature = feature.to(device = self.device, dtype=torch.float32)
+                labels = labels.to(device=self.device, dtype=torch.int64)
 
-                fake_feature = G(z,labels)
-                
-                outputs = net.classifier_retrain(fake_feature)
+                    
+                outputs = feature_classifier(feature)
                 pred = fn_pred(outputs)
                 
                 optimizer.zero_grad()
@@ -366,16 +402,16 @@ class Train:
                 train_acc_arr+=[acc.item()]
             
             with torch.no_grad():
-                net.eval()
+                feature_classifier.eval()
                 test_loss_arr = []
                 test_acc_arr = []
                 
-                for input_value, labels in test_loader:
+                for feature, labels in test_loader:
                     
-                    input_value = input_value.to(self.device,dtype=torch.float32)
+                    feature = feature.to(self.device,dtype=torch.float32)
                     labels = labels.to(self.device)
                     
-                    outputs = net(input_value)
+                    outputs = feature_classifier(feature)
                     pred = fn_pred(outputs)
                     
                     test_loss = criterion(outputs,labels)
@@ -383,14 +419,24 @@ class Train:
                     
                     test_loss_arr+=[test_loss.item()]
                     test_acc_arr+=[test_acc.item()]
+
+                    pred = fn_pred_(pred)
+                    pred = pred.to('cpu').numpy()
+                    labels = labels.to('cpu').numpy()
+                    pred = pred.reshape(-1)
+                    labels = labels.reshape(-1)
+
+                    f1_result = f1_score(y_pred = pred, y_true = labels, average='micro')         
+                    cm = confusion_matrix(pred, labels)
+                    plot_confusion_matrix(cm = cm, classes = self.msrc_class, title='Feature_GAN_confusion_matrix', save_dir = self.lstm_retrain_figure_dir)
+                    
+                  
+            print(self.mode+'\tEpoch [{}/{}]\ttrain_Loss: {:.4f}, train_Accuracy: {:.4f}\ttest_Loss: {:.4f}, test_Accuracy: {:.4f}\tf1_score: {:.4f}' .format(epoch+1, self.num_epoch, np.mean(train_loss_arr) , np.mean(train_acc_arr), 
+                                                                                                                                np.mean(test_loss_arr) , np.mean(test_acc_arr), f1_result))
             
-            print('Epoch [{}/{}]\ttrain_Loss: {:.4f}, train_Accuracy: {:.4f}\ttest_Loss: {:.4f}, test_Accuracy: {:.4f}' .format(epoch+1, self.num_epoch, np.mean(train_loss_arr) , np.mean(train_acc_arr), 
-                                                                                                                                np.mean(test_loss_arr) , np.mean(test_acc_arr)))
             
-            
-            if min_train_loss > np.mean(train_loss_arr):
-                min_train_loss = np.mean(train_loss_arr)
-                save_model(ckpt_dir=self.lstm_retrain_ckpt_dir, net=net, optim=optimizer, epoch=epoch)
+
+            save_model(ckpt_dir=self.lstm_retrain_ckpt_dir, net=net, optim=optimizer, epoch=0)
                 
             writer.add_scalar('train_loss', np.mean(train_loss_arr), epoch)
             writer.add_scalar('train_acc', np.mean(train_acc_arr), epoch)
