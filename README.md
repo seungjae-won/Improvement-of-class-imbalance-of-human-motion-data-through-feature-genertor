@@ -4,7 +4,7 @@
 <br>
 Using the ACGAN idear feature generator
 <br><br>
-<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/model_figure.PNG" align="left" height="300" width="500" >
+<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/model_figure.PNG" align="left" height="300" width="800" >
 
 <br><br><br><br><br><br><br><br><br><br><br><br>
 
@@ -22,7 +22,7 @@ There are a total of 12 classes, approximately 50 sequences for each class were 
 
 
 ### Method
-<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/proposed_method.PNG" align="left" height="300" width="500" >
+<img src="https://github.com/seungjae-won/feature_generator__human_motion/blob/master/figure/proposed_method.PNG" align="left" height="300" width="800" >
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br>
 
 
@@ -33,8 +33,9 @@ There are a total of 12 classes, approximately 50 sequences for each class were 
 | Over-sampling(smoth)      | 0.8467 ± 0.008 | 0.8300 ± 0.008 | 0.7917 ± 0.025 | 0.6433 ± 0.009 |
 | Weight-balancing      | **0.8917 ± 0.016** | 0.8100 ± 0.023 | 0.7333 ± 0.011 | **0.6633 ± 0.008** |
 | **Proposed method**      | 0.8850 ± 0.006 | **0.8517 ± 0.006** | **0.8133 ± 0.004** | 0.6350 ± 0.014 |
-                           * Mean accuracy and standard deviation of 5 experiments
-
+<br>
+                                                       * Mean accuracy and standard deviation of 5 experiments
+<br>
 | Method | Average improvement | 
 | :---------------------: |------------------------:|
 | Over-sampling(smoth)  | 0.0137 |
