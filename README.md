@@ -25,7 +25,7 @@ There are a total of 12 classes, approximately 50 sequences for each class were 
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br>
 
 
-### Results(Acciracu)
+### Results(Accuracy)
 | Imbalane rate | 2 : 1  | 3 : 1 | 5 : 1 | 10 : 1 |
 | :---------------------: |------------------------:|----------------------:|-----------------------:|------------------------:|
 | Original LSTM      | 0.8483 ± 0.021 | 0.8050 ± 0.023 | 0.7733 ± 0.024 | 0.6300 ± 0.008 |
