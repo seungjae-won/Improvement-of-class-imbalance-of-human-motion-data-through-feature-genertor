@@ -1,4 +1,3 @@
- -- This is an ongoing project and not the final result. --
 
 ## Improvement of data imbalance problem in human motion recognition
 <br>
